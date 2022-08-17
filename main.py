@@ -1,64 +1,86 @@
-import requests
-from bs4 import BeautifulSoup
+import boto3
+from webCrawlerIMDB import get_all_information
+import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 
-def get_all_information(url):
-    starting_url = requests.get(url)
-    content = starting_url.content
 
-    soup = BeautifulSoup(content, "html.parser")#to make parse
+def describe_ec2_instance():
+    try:
+        print("Describing EC2 instance")
+        resource_ec2 = boto3.client("ec2")
+        print(resource_ec2.describe_instances()["Reservations"][0]["Instances"][0]["InstanceId"])
+        return str(resource_ec2.describe_instances()["Reservations"][0]["Instances"][0]["InstanceId"])
+    except Exception as e:
+        print(e)
 
-    creator = soup.find("a", {"class": "ipc-metadata-list-item__list-content-item "
-                                       "ipc-metadata-list-item__list-content-item--link"})
-    print("Creator: " + creator.text)
 
-    #to access details inside the box
-    star_class = soup.find("li", {"class": "ipc-metadata-list__item ipc-metadata-list-item--link"})
-    #to get all the authors inside the box
-    stars = star_class.findAll("a", {
-        "class": "ipc-metadata-list-item__list-content-item ipc-metadata-list-item__list-content-item--link"})
+def stop_ec2_instance():
+    try:
+        print("Stop EC2 instance")
+        instance_id = describe_ec2_instance()
+        resource_ec2 = boto3.client("ec2")
+        print(resource_ec2.stop_instances(InstanceIds=[instance_id]))
+    except Exception as e:
+        print(e)
 
-    concatenate_stars = "Stars: "
-    for star in stars:
-        if star == stars[len(stars)-1]:
-            concatenate_stars += star.text
-        else:
-            concatenate_stars += star.text + ","
 
-    print(concatenate_stars)
+base_url = 'https://www.imdb.com/title/'
+client = boto3.client('s3',
+                        # Set up AWS credentials
+                        aws_access_key_id="AKIAS4KQCKPEZTVWBNOU",
+                         aws_secret_access_key="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")
 
-    #Details information
-    details_section = soup.find("div", {"data-testid": "title-details-section"})  # details section
-    details_companies = details_section.find("li", {"data-testid": "title-details-companies"})  # companies
-    production_companies = details_companies.findAll("a", {
-        "class": "ipc-metadata-list-item__list-content-item ipc-metadata-list-item__list-content-item--link"})
+bucket_name = 'read-and-upload'
 
-    concatenate_company = "Production companies: "
-    for production_company in production_companies:
-        if production_company == production_companies[len(production_companies)-1]:
-            concatenate_company += production_company.text
-        else:
-            concatenate_company += production_company.text + ","
-    print(concatenate_company)
+object_key = 'IMDB_list/new_diff_links.csv'
+csv_obj = client.get_object(Bucket=bucket_name, Key=object_key)
+body = csv_obj['Body']
+csv_string = body.read().decode('utf-8')
 
-    #official Sites Details
-    official_sites_details = details_section.find("li", {"data-testid": "details-officialsites"})
-    oficial_sites = official_sites_details.findAll("a", {
-        "class": "ipc-metadata-list-item__list-content-item ipc-metadata-list-item__list-content-item--link"})
-    print("Official sites:")
-    for oficialSite in oficial_sites:
-        print(oficialSite.get('href'))
+# incomplete links
+mergeString = csv_string.splitlines()
 
-    #More Like This
-    moreLikeThis = soup.find("section", {"data-testid": "MoreLikeThis"})
-    titleClass = soup.findAll("div", {
-        "class": "ipc-poster-card ipc-poster-card--base ipc-poster-card--dynamic-width ipc-sub-grid-item ipc-sub-grid-item--span-2"})
+complete_url = []
+for text in mergeString:
+    complete_url.append(base_url + text + "/")
 
-    print("More like this:")
-    for i in range(len(titleClass)):
-        title = titleClass[i].find("span", {"data-testid": "title"})
-        print(title.text)
+all_information = []
+s3 = boto3.client('s3')
 
-url = "https://www.imdb.com/title/tt1190634/"
-get_all_information(url)
+# create folder
+s3.put_object(Bucket='read-and-upload', Key=('IMDB_list'+'/'))
 
+if __name__ == '__main__':
+
+    with ThreadPoolExecutor(max_workers=8) as p:
+        # all information is kept in a list within a list
+        all_information = p.map(get_all_information, complete_url)
+
+    tittle = []
+    creator = []
+    stars = []
+    company = []
+    official_site = []
+
+
+    # all link information is added to the lists in the correct order
+    for link_information in all_information:
+
+        creator.append(link_information[0])
+        stars.append(link_information[1])
+        company.append(link_information[2])
+        official_site.append(link_information[3])
+
+    # data frame is created using all collected information
+    movie_list = pd.DataFrame(
+        {"Creator": creator, "Stars": stars, "Production Companies": company, "Official Sites": official_site})
+    # Saved to bucket as csv
+    movie_list.to_csv(r"C:\Users\userpc\Desktop\Movies.csv")
+    s3.upload_file(r'C:\Users\userpc\Desktop\Movies.csv', 'read-and-upload',
+                   'IMDB_list/' + 'all_info_new' + '.csv')
+
+    # To shut down ec2 when execution is done
+    stop_ec2_instance()
+
+    
 
