@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 import csv
 
 
-def get_all_information(url):
+def more_like_this(url):
     sleep(1)
     all_information_string = []
     starting_url = requests.get(url)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     count = 0
     with ThreadPoolExecutor(max_workers=8) as p:
         # all information is kept in a list within a list
-        all_information = p.map(get_all_information, mergeString)
+        all_information = p.map(more_like_this, mergeString)
 
 
     # data frame is created using all collected information
