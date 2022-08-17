@@ -24,32 +24,33 @@ def stop_ec2_instance():
         print(e)
 
 
-base_url = 'https://www.imdb.com/title/'
+base_url = "https://www.imdb.com/title/"
+
 client = boto3.client('s3',
                         # Set up AWS credentials
-                        aws_access_key_id="",
-                         aws_secret_access_key="")
+                        aws_access_key_id="Secret",
+                         aws_secret_access_key="Secret")
 
-bucket_name = 'read-and-upload'
+bucket_name = 'Secret'
 
-object_key = 'IMDB_list/new_diff_links.csv'
+object_key = 'imdb/imdb_id_list.csv'
 csv_obj = client.get_object(Bucket=bucket_name, Key=object_key)
 body = csv_obj['Body']
 csv_string = body.read().decode('utf-8')
 
 # incomplete links
 mergeString = csv_string.splitlines()
-
 complete_url = []
+
+# complete links
 for text in mergeString:
     complete_url.append(base_url + text + "/")
 
-all_information = []
 s3 = boto3.client('s3')
 
 # create folder
 s3.put_object(Bucket='read-and-upload', Key=('IMDB_list'+'/'))
-
+print(complete_url)
 if __name__ == '__main__':
 
     with ThreadPoolExecutor(max_workers=8) as p:
