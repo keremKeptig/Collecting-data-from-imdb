@@ -31,7 +31,7 @@ s3 = boto3.client('s3')
 # create folder
 s3.put_object(Bucket='read-and-upload', Key=('IMDB_list'+'/'))
 # first element not complete url
-del mergeString[0]
+del complete_url[0]
 all_information = []
 new_list = []
 
@@ -39,7 +39,7 @@ for i in range(0, 75000):
     new_list.append(complete_url[i])
 
 # complete_url -> new_list
-print(len(complete_url))
+
 if __name__ == '__main__':
     with ThreadPoolExecutor(max_workers=4) as p:
         all_information = p.map(get_all_information, new_list)
