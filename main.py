@@ -27,8 +27,8 @@ def stop_ec2_instance():
 base_url = 'https://www.imdb.com/title/'
 client = boto3.client('s3',
                         # Set up AWS credentials
-                        aws_access_key_id="AKIAS4KQCKPEZTVWBNOU",
-                         aws_secret_access_key="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")
+                        aws_access_key_id="",
+                         aws_secret_access_key="")
 
 bucket_name = 'read-and-upload'
 
