@@ -39,7 +39,7 @@ for i in range(150000, len(complete_url)):
     new_list.append(complete_url[i])
 
 # complete_url -> new_list
-print(len(complete_url))
+
 if __name__ == '__main__':
     with ThreadPoolExecutor(max_workers=4) as p:
         all_information = p.map(get_all_information, new_list)
