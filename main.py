@@ -50,7 +50,7 @@ s3 = boto3.client('s3')
 
 # create folder
 s3.put_object(Bucket='read-and-upload', Key=('IMDB_list'+'/'))
-print(complete_url)
+
 if __name__ == '__main__':
 
     with ThreadPoolExecutor(max_workers=8) as p:
